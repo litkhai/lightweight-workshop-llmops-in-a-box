@@ -1,10 +1,25 @@
 # LLMOps in a Box — Self-Service Workshop
 
-**[Overview](README.md) · [Workshop](workshop/README.md) · [Workshop setup](workshop/00-setup.md) · [Instructor guide](workshop/instructor-guide.md) · [Docker validation](workshop/docker-validation.md)**
+**[Overview](README.md) · [Documentation site](https://litkhai.github.io/lightweight-workshop-llmops-in-a-box/) · [Workshop](workshop/README.md) · [Workshop setup](workshop/00-setup.md) · [Instructor guide](workshop/instructor-guide.md) · [Docker validation](workshop/docker-validation.md)**
 
 A single, self-guided workshop stack for running an LLM application through a gateway and inspecting every model call. There are no phases and no cloud account is required unless you choose Anthropic or ClickHouse Cloud during setup.
 
 Start the English-only, self-guided course from the dedicated [Workshop](workshop/README.md) section. It covers setup, observability, prompt management, monitoring, datasets, experiments, automated and human evaluation, and direct ClickHouse analysis.
+
+## Documentation site
+
+The workshop is published as a searchable [GitHub Pages documentation site](https://litkhai.github.io/lightweight-workshop-llmops-in-a-box/). The site uses the Markdown files in `workshop/` directly, so the repository and website never maintain separate copies of the course.
+
+To preview the site locally:
+
+```bash
+python3 -m venv .venv-docs
+source .venv-docs/bin/activate
+pip install --requirement requirements-docs.txt
+mkdocs serve
+```
+
+Open `http://127.0.0.1:8000`. A push to `main` that changes the workshop, theme, MkDocs configuration, or Pages workflow rebuilds and deploys the site automatically.
 
 ## What you get
 

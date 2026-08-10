@@ -1,6 +1,6 @@
 # LLMOps in a Box Workshop
 
-**[Repository overview](../README.md) · [Start workshop](00-setup.md) · [Instructor guide](instructor-guide.md) · [Docker validation](docker-validation.md)**
+**[Repository overview](https://github.com/litkhai/lightweight-workshop-llmops-in-a-box) · [Start workshop](00-setup.md) · [Instructor guide](instructor-guide.md) · [Docker validation](docker-validation.md)**
 
 This English-only workshop is a self-guided tour of the AI engineering quality loop on open-source, self-hosted Langfuse v4. You will generate real model traffic, inspect traces, manage prompts, turn failures into a dataset, run repeatable experiments, add automated and human scores, and query the resulting quality signals directly in ClickHouse.
 

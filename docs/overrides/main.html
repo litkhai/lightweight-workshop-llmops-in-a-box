@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block announce %}
+  <span class="ch-announce__dot" aria-hidden="true"></span>
+  <strong>Self-service workshop</strong>
+  <span class="ch-announce__separator" aria-hidden="true">·</span>
+  10 modules
+  <span class="ch-announce__separator" aria-hidden="true">·</span>
+  4 deployment paths
+  <span class="ch-announce__separator" aria-hidden="true">·</span>
+  1 evidence-driven quality loop
+{% endblock %}
+
+{% block content %}
+  {% if page and page.is_homepage %}
+    <section class="ch-hero" aria-labelledby="ch-hero-title">
+      <div class="ch-hero__copy">
+        <p class="ch-hero__eyebrow">OPEN-SOURCE · SELF-HOSTED · HANDS-ON</p>
+        <h1 id="ch-hero-title">Build an LLM quality loop you can inspect.</h1>
+        <p class="ch-hero__lead">
+          Route one model path, observe every call, evaluate changes, and query
+          the evidence directly in ClickHouse.
+        </p>
+        <div class="ch-hero__actions">
+          <a class="ch-button ch-button--primary" href="{{ '00-setup/' | url }}">
+            Start module 00 <span aria-hidden="true">→</span>
+          </a>
+          <a class="ch-button ch-button--secondary" href="{{ 'docker-validation/' | url }}">
+            Review validation
+          </a>
+        </div>
+        <dl class="ch-hero__facts">
+          <div><dt>2–3.5h</dt><dd>delivery formats</dd></div>
+          <div><dt>10</dt><dd>guided modules</dd></div>
+          <div><dt>4</dt><dd>deployment paths</dd></div>
+        </dl>
+      </div>
+      <div class="ch-hero__visual" aria-hidden="true">
+        <div class="ch-hero__label">QUALITY SIGNALS</div>
+        <div class="ch-bars">
+          <span style="--bar-height: 34%"></span>
+          <span style="--bar-height: 54%"></span>
+          <span style="--bar-height: 43%"></span>
+          <span style="--bar-height: 76%"></span>
+          <span style="--bar-height: 63%"></span>
+          <span style="--bar-height: 92%"></span>
+          <span style="--bar-height: 82%"></span>
+        </div>
+        <div class="ch-hero__flow">
+          <span>TRACE</span><i>→</i><span>DATASET</span><i>→</i><span>SCORE</span>
+        </div>
+      </div>
+    </section>
+  {% endif %}
+  {{ super() }}
+{% endblock %}
