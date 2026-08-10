@@ -1,6 +1,6 @@
 # 00 — Workshop Setup
 
-**[Workshop home](README.md) · [Next: Observability](01-observability.md)**
+**[Workshop home](workshop-overview.md) · [Next: Observability](01-observability.md)**
 
 ## Goal
 

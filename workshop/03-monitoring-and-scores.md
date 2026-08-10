@@ -1,6 +1,6 @@
 # 03 — Monitor Live Traffic with Scores
 
-**[Previous: Prompt Management](02-prompt-management.md) · [Workshop home](README.md) · [Next: Datasets](04-datasets.md)**
+**[Previous: Prompt Management](02-prompt-management.md) · [Workshop home](workshop-overview.md) · [Next: Datasets](04-datasets.md)**
 
 ## Goal
 

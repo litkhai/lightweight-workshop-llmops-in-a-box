@@ -1,6 +1,6 @@
 # Instructor Guide — LLMOps in a Box
 
-**[Workshop home](README.md) · [Learner start](00-setup.md) · [Docker validation](docker-validation.md) · [Repository overview](https://github.com/litkhai/lightweight-workshop-llmops-in-a-box)**
+**[Workshop home](workshop-overview.md) · [Learner start](00-setup.md) · [Docker validation](docker-validation.md) · [Repository overview](https://github.com/litkhai/lightweight-workshop-llmops-in-a-box)**
 
 This guide supports a live English-language delivery of the self-guided workshop. Learner instructions remain the source of truth; these notes add timing, teaching points, checkpoints, and recovery options.
 

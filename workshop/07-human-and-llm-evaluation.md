@@ -1,6 +1,6 @@
 # 07 — Human Review and LLM-as-a-Judge
 
-**[Previous: Evaluate a Change](06-evaluate-a-change.md) · [Workshop home](README.md) · [Next: ClickHouse Analytics](08-clickhouse-analytics.md)**
+**[Previous: Evaluate a Change](06-evaluate-a-change.md) · [Workshop home](workshop-overview.md) · [Next: ClickHouse Analytics](08-clickhouse-analytics.md)**
 
 ## Goal
 

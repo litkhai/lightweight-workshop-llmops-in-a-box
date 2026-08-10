@@ -1,6 +1,6 @@
 # 08 — Analyze the Quality Loop in ClickHouse
 
-**[Previous: Human and LLM Evaluation](07-human-and-llm-evaluation.md) · [Workshop home](README.md) · [Next: Wrap-up](09-wrap-up.md)**
+**[Previous: Human and LLM Evaluation](07-human-and-llm-evaluation.md) · [Workshop home](workshop-overview.md) · [Next: Wrap-up](09-wrap-up.md)**
 
 ## Goal
 

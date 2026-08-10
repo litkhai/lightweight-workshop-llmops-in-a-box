@@ -1,10 +1,10 @@
 # LLMOps in a Box — Self-Service Workshop
 
-**[Overview](README.md) · [Documentation site](https://litkhai.github.io/lightweight-workshop-llmops-in-a-box/) · [Workshop](workshop/README.md) · [Workshop setup](workshop/00-setup.md) · [Instructor guide](workshop/instructor-guide.md) · [Docker validation](workshop/docker-validation.md)**
+**[Overview](README.md) · [Documentation site](https://litkhai.github.io/lightweight-workshop-llmops-in-a-box/) · [Workshop](workshop/workshop-overview.md) · [Workshop setup](workshop/00-setup.md) · [Instructor guide](workshop/instructor-guide.md) · [Docker validation](workshop/docker-validation.md)**
 
 A single, self-guided workshop stack for running an LLM application through a gateway and inspecting every model call. There are no phases and no cloud account is required unless you choose Anthropic or ClickHouse Cloud during setup.
 
-Start the English-only, self-guided course from the dedicated [Workshop](workshop/README.md) section. It covers setup, observability, prompt management, monitoring, datasets, experiments, automated and human evaluation, and direct ClickHouse analysis.
+Start the English-only, self-guided course from the dedicated [Workshop](workshop/workshop-overview.md) section. It covers setup, observability, prompt management, monitoring, datasets, experiments, automated and human evaluation, and direct ClickHouse analysis.
 
 ## Documentation site
 
@@ -242,7 +242,7 @@ This revision was validated against the following paths:
 ├── docker-compose.yml             # Complete workshop stack
 ├── .env.example                   # Local-only field reference; setup generates real secrets
 ├── workshop/                      # English learner modules, instructor notes, assets, SQL
-│   ├── README.md                  # Dedicated workshop landing page
+│   ├── workshop-overview.md       # Dedicated workshop landing page
 │   ├── 00-setup.md ... 09-wrap-up.md
 │   ├── instructor-guide.md
 │   ├── assets/                    # Dataset and paste-ready evaluators

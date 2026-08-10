@@ -1,6 +1,6 @@
 # 09 — Close the Loop
 
-**[Previous: ClickHouse Analytics](08-clickhouse-analytics.md) · [Workshop home](README.md) · [Instructor guide](instructor-guide.md)**
+**[Previous: ClickHouse Analytics](08-clickhouse-analytics.md) · [Workshop home](workshop-overview.md) · [Instructor guide](instructor-guide.md)**
 
 ## Goal
 

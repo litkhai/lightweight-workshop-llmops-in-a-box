@@ -39,7 +39,9 @@ theme:
     - content.action.edit
     - content.code.copy
     - navigation.footer
+    - navigation.expand
     - navigation.indexes
+    - navigation.path
     - navigation.sections
     - navigation.tabs
     - navigation.tabs.sticky
@@ -50,8 +52,9 @@ theme:
     - toc.follow
 
 nav:
-  - Home: README.md
+  - Home: index.md
   - Workshop:
+      - Overview: workshop-overview.md
       - "00 · Setup": 00-setup.md
       - "01 · Observability": 01-observability.md
       - "02 · Prompt Management": 02-prompt-management.md

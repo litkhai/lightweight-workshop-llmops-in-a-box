@@ -1,6 +1,6 @@
 # 02 — Manage and Test a Prompt
 
-**[Previous: Observability](01-observability.md) · [Workshop home](README.md) · [Next: Monitoring](03-monitoring-and-scores.md)**
+**[Previous: Observability](01-observability.md) · [Workshop home](workshop-overview.md) · [Next: Monitoring](03-monitoring-and-scores.md)**
 
 ## Goal
 

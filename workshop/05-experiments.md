@@ -1,6 +1,6 @@
 # 05 — Run a Baseline Experiment
 
-**[Previous: Datasets](04-datasets.md) · [Workshop home](README.md) · [Next: Evaluate a Change](06-evaluate-a-change.md)**
+**[Previous: Datasets](04-datasets.md) · [Workshop home](workshop-overview.md) · [Next: Evaluate a Change](06-evaluate-a-change.md)**
 
 ## Goal
 

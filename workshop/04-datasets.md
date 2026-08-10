@@ -1,6 +1,6 @@
 # 04 — Build a Golden Dataset
 
-**[Previous: Monitoring](03-monitoring-and-scores.md) · [Workshop home](README.md) · [Next: Experiments](05-experiments.md)**
+**[Previous: Monitoring](03-monitoring-and-scores.md) · [Workshop home](workshop-overview.md) · [Next: Experiments](05-experiments.md)**
 
 ## Goal
 

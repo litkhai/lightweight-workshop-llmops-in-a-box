@@ -1,6 +1,6 @@
 # 06 — Evaluate a Prompt Change
 
-**[Previous: Experiments](05-experiments.md) · [Workshop home](README.md) · [Next: Human and LLM Evaluation](07-human-and-llm-evaluation.md)**
+**[Previous: Experiments](05-experiments.md) · [Workshop home](workshop-overview.md) · [Next: Human and LLM Evaluation](07-human-and-llm-evaluation.md)**
 
 ## Goal
 

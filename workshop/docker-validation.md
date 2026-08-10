@@ -1,6 +1,6 @@
 # Docker Validation Report
 
-**[Workshop home](README.md) · [Setup lab](00-setup.md) · [Instructor guide](instructor-guide.md) · [Repository overview](https://github.com/litkhai/lightweight-workshop-llmops-in-a-box)**
+**[Workshop home](workshop-overview.md) · [Setup lab](00-setup.md) · [Instructor guide](instructor-guide.md) · [Repository overview](https://github.com/litkhai/lightweight-workshop-llmops-in-a-box)**
 
 ## Purpose
 

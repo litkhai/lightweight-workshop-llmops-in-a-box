@@ -1,6 +1,6 @@
 # 01 — Read an LLM Request End to End
 
-**[Previous: Setup](00-setup.md) · [Workshop home](README.md) · [Next: Prompt Management](02-prompt-management.md)**
+**[Previous: Setup](00-setup.md) · [Workshop home](workshop-overview.md) · [Next: Prompt Management](02-prompt-management.md)**
 
 ## Goal
 
