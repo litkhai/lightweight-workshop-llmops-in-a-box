@@ -1,86 +1,251 @@
-services:
+x-langfuse-environment: &langfuse-environment
+  NEXTAUTH_URL: http://localhost:${LANGFUSE_PORT:-3000}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-langfuse}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-langfuse}
+  SALT: ${LANGFUSE_SALT}
+  ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY}
+  TELEMETRY_ENABLED: "false"
+  CLICKHOUSE_URL: ${CLICKHOUSE_URL}
+  CLICKHOUSE_MIGRATION_URL: ${CLICKHOUSE_MIGRATION_URL}
+  CLICKHOUSE_MIGRATION_SSL: ${CLICKHOUSE_MIGRATION_SSL:-false}
+  CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+  CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+  CLICKHOUSE_DB: ${CLICKHOUSE_DB:-langfuse}
+  CLICKHOUSE_CLUSTER_ENABLED: ${CLICKHOUSE_CLUSTER_ENABLED:-false}
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  REDIS_AUTH: ${REDIS_AUTH}
+  LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+  LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+  LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+  LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+  LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+  LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+  LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+  LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+  LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+  LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+  LANGFUSE_S3_BATCH_EXPORT_ENABLED: "false"
+  # Permit only the Compose-internal LiteLLM hostname for Playground/evaluator
+  # connections. Langfuse blocks private network targets by default (SSRF).
+  LANGFUSE_LLM_CONNECTION_WHITELISTED_HOST: litellm
+  # Workshop-only: run trusted TypeScript code evaluators inside the worker.
+  # This is not a sandbox and must not be used for untrusted evaluator code.
+  LANGFUSE_CODE_EVAL_DISPATCHER: insecure-local
+  QUEUE_CONSUMER_CODE_EVAL_EXECUTION_QUEUE_IS_ENABLED: "true"
 
-  # ── Local model serving (CPU) ────────────────────────────────────────────────
+services:
+  # Optional local model. setup.sh enables this profile when no Anthropic key is supplied.
   ollama:
     image: ollama/ollama:latest
+    profiles: [local-model]
+    restart: unless-stopped
     volumes:
       - ollama-data:/root/.ollama
     healthcheck:
-      test: ["CMD-SHELL", "ollama list || exit 1"]
+      test: [CMD, ollama, list]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 15s
 
-  # ── LLM gateway + language routing ──────────────────────────────────────────
   litellm:
     image: ghcr.io/berriai/litellm:main-stable
+    restart: unless-stopped
     depends_on:
-      ollama:
-        condition: service_healthy
-      langfuse:
+      langfuse-web:
         condition: service_healthy
     environment:
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-workshop-key}
-      # Langfuse — pre-configured to match LANGFUSE_INIT_* values below
-      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-pk-lf-workshop}
-      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-sk-lf-workshop}
-      LANGFUSE_HOST: http://langfuse:3000
-      # Optional: set to enable cloud routing for Korean messages
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OLLAMA_MODEL_PROVIDER: ollama/${OLLAMA_MODEL:-qwen3:1.7b}
+      WORKSHOP_USER_ID: ${WORKSHOP_USER_ID}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+      LANGFUSE_OTEL_HOST: http://langfuse-web:3000
     volumes:
       - ./config/litellm_config.yaml:/app/config.yaml:ro
       - ./config/callbacks.py:/app/callbacks.py:ro
     ports:
-      - "${LITELLM_PORT:-4000}:4000"
-    command: ["--config", "/app/config.yaml", "--port", "4000"]
+      - 127.0.0.1:${LITELLM_PORT:-4000}:4000
+    command: [--config, /app/config.yaml, --port, "4000"]
+    healthcheck:
+      test: [CMD-SHELL, "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
 
-  # ── Observability ────────────────────────────────────────────────────────────
-  langfuse:
-    image: langfuse/langfuse:latest
+  librechat:
+    image: ${LIBRECHAT_IMAGE:-registry.librechat.ai/danny-avila/librechat:latest}
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      litellm:
+        condition: service_healthy
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3080
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/LibreChat
+      CONFIG_PATH: /app/librechat.yaml
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      ALLOW_EMAIL_LOGIN: "true"
+      ALLOW_REGISTRATION: "false"
+      ALLOW_SOCIAL_LOGIN: "false"
+      ALLOW_SOCIAL_REGISTRATION: "false"
+      ALLOW_UNVERIFIED_EMAIL_LOGIN: "true"
+      JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
+      JWT_REFRESH_SECRET: ${LIBRECHAT_JWT_REFRESH_SECRET}
+      CREDS_KEY: ${LIBRECHAT_CREDS_KEY}
+      CREDS_IV: ${LIBRECHAT_CREDS_IV}
+    volumes:
+      - ./config/librechat.yaml:/app/librechat.yaml:ro
+      - librechat-images:/app/client/public/images
+      - librechat-uploads:/app/uploads
+      - librechat-logs:/app/logs
+    ports:
+      - 127.0.0.1:${LIBRECHAT_PORT:-3080}:3080
+
+  mongodb:
+    image: mongo:8.0.20
+    restart: unless-stopped
+    command: mongod --noauth
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  langfuse-worker:
+    image: langfuse/langfuse-worker:4
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment: *langfuse-environment
+
+  langfuse-web:
+    image: langfuse/langfuse:4
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/langfuse
-      NEXTAUTH_SECRET: workshop-secret
-      SALT: workshop-salt
-      ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
-      NEXTAUTH_URL: http://localhost:${LANGFUSE_PORT:-3000}
-      TELEMETRY_ENABLED: "false"
-      # Auto-create org / project / API keys / user on first boot
+      <<: *langfuse-environment
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://localhost:${MINIO_PORT:-9090}
       LANGFUSE_INIT_ORG_ID: workshop-org
-      LANGFUSE_INIT_ORG_NAME: Workshop
+      LANGFUSE_INIT_ORG_NAME: LLMOps Workshop
       LANGFUSE_INIT_PROJECT_ID: workshop-project
-      LANGFUSE_INIT_PROJECT_NAME: LLMOps in a Box
-      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: pk-lf-workshop
-      LANGFUSE_INIT_PROJECT_SECRET_KEY: sk-lf-workshop
-      LANGFUSE_INIT_USER_EMAIL: workshop@example.com
-      LANGFUSE_INIT_USER_NAME: Workshop User
-      LANGFUSE_INIT_USER_PASSWORD: workshop123
+      LANGFUSE_INIT_PROJECT_NAME: LLMOps Workshop
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+      LANGFUSE_INIT_USER_EMAIL: ${WORKSHOP_USER_EMAIL}
+      LANGFUSE_INIT_USER_NAME: ${WORKSHOP_USER_ID}
+      LANGFUSE_INIT_USER_PASSWORD: ${WORKSHOP_PASSWORD}
     ports:
-      - "${LANGFUSE_PORT:-3000}:3000"
+      - 127.0.0.1:${LANGFUSE_PORT:-3000}:3000
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/public/health || exit 1"]
+      test: [CMD-SHELL, "wget -q -O /dev/null \"http://$$(hostname):3000/api/public/health\""]
       interval: 10s
       timeout: 5s
-      retries: 15
+      retries: 30
       start_period: 30s
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: langfuse
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-langfuse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-langfuse}
+      TZ: UTC
+      PGTZ: UTC
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [CMD-SHELL, "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: [redis-server, --requirepass, "${REDIS_AUTH}", --maxmemory-policy, noeviction]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD-SHELL, "redis-cli -a '$${REDIS_AUTH}' ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    environment:
+      REDIS_AUTH: ${REDIS_AUTH}
+
+  minio:
+    image: cgr.dev/chainguard/minio
+    restart: unless-stopped
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    ports:
+      - 127.0.0.1:${MINIO_PORT:-9090}:9000
+    healthcheck:
+      test: [CMD, mc, ready, local]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Optional local ClickHouse. Cloud mode leaves this profile disabled.
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.12
+    profiles: [local-clickhouse]
+    restart: unless-stopped
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-langfuse}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      TZ: UTC
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - clickhouse-logs:/var/log/clickhouse-server
+    ports:
+      - 127.0.0.1:${CLICKHOUSE_HTTP_PORT:-8123}:8123
+      - 127.0.0.1:${CLICKHOUSE_NATIVE_PORT:-9000}:9000
+    healthcheck:
+      test: [CMD-SHELL, "clickhouse-client --user \"$${CLICKHOUSE_USER}\" --password \"$${CLICKHOUSE_PASSWORD}\" --query 'SELECT 1' >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 volumes:
   ollama-data:
+  mongodb-data:
+  librechat-images:
+  librechat-uploads:
+  librechat-logs:
   postgres-data:
+  redis-data:
+  minio-data:
+  clickhouse-data:
+  clickhouse-logs:

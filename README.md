@@ -1,295 +1,246 @@
-# LLMOps in a Box — Lightweight Workshop Edition
+# LLMOps in a Box — Self-Service Workshop
 
-A self-contained, laptop-friendly LLMOps stack for hands-on workshops and self-study.
-Everything runs locally: no cloud account required, no per-token cost, no data leaving your machine.
+**[Overview](README.md) · [Workshop](workshop/README.md) · [Workshop setup](workshop/00-setup.md) · [Instructor guide](workshop/instructor-guide.md) · [Docker validation](workshop/docker-validation.md)**
 
----
+A single, self-guided workshop stack for running an LLM application through a gateway and inspecting every model call. There are no phases and no cloud account is required unless you choose Anthropic or ClickHouse Cloud during setup.
 
-## What this is
+Start the English-only, self-guided course from the dedicated [Workshop](workshop/README.md) section. It covers setup, observability, prompt management, monitoring, datasets, experiments, automated and human evaluation, and direct ClickHouse analysis.
 
-This repository is a stripped-down, beginner-accessible version of [llmops-in-a-box](https://github.com/litkhai/llmops-in-a-box) — a production-oriented LLMOps stack built around LiteLLM, Langfuse, and ClickHouse.
+## What you get
 
-The full stack is designed for teams running LLMs in production on AWS, with Terraform, domain names, and a multi-phase build-up of capability. This workshop edition removes the infrastructure ceremony and focuses on the core concepts that matter most:
-
-1. **A gateway layer** sits between every client and every model — routing, policy, and observability happen in one place without touching application code.
-2. **Language-aware routing** rewrites the model field based on Unicode script detection in the user's message, sending different languages to different models — with zero changes at the client.
-3. **Traces appear in Langfuse** for every completion: prompt, response, latency, token counts, the routing decision that was made, and which model actually answered.
-
-The model is a small, CPU-capable open-weight model served by Ollama. You do not need a GPU, an API key, or an internet connection after the initial image and model pull.
-
----
-
-## Architecture
-
-```
-Your client (Python / curl / any OpenAI SDK)
-        │
-        │  POST /v1/chat/completions
-        │  model: "auto"          ← single alias for everything
-        ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  LiteLLM  (port 4000)                                           │
-│                                                                 │
-│  UnifiedRouter (callbacks.py)                                   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  async_pre_call_hook                                     │   │
-│  │  · detect dominant Unicode script of last user message  │   │
-│  │  · rewrite data["model"]:                               │   │
-│  │      Korean (Hangul)  →  claude-sonnet  (if key set)    │   │
-│  │      English / CJK   →  local  (Ollama)                 │   │
-│  │  · write routing span to Langfuse trace                 │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  async_log_success_event                                        │
-│  · send trace + generation span to Langfuse (SDK, direct)      │
-│  · completion calls only — management API calls are filtered    │
-└──────────────────┬─────────────────────────┬───────────────────┘
-                   │                         │
-         model: local                model: claude-sonnet
-                   │                         │
-                   ▼                         ▼
-          Ollama (in Docker)          Anthropic API
-          qwen2.5:1.5b                (optional)
-          CPU, ~1 GB RAM
-
-
-LiteLLM ──────── traces ──────────▶ Langfuse (port 3000)
-                                    └── Postgres (metadata)
+```text
+Browser
+  └─ LibreChat :3080
+       └─ LiteLLM :4000
+            ├─ Anthropic Sonnet (when an API key is supplied)
+            └─ Ollama + selected local model (otherwise)
+                 └─ Langfuse v4 :3000
+                      ├─ PostgreSQL (always local)
+                      ├─ Redis (local)
+                      ├─ MinIO / S3-compatible storage (local)
+                      └─ ClickHouse Cloud or local ClickHouse
 ```
 
-### Why this architecture?
+LibreChat only knows the stable LiteLLM model alias `auto`. Setup decides whether that alias uses Sonnet or the selected local Ollama model. LiteLLM exports OpenTelemetry observations to Langfuse v4 for prompts, responses, token usage, latency, errors, and model metadata.
 
-**Single entrypoint.** Every client sends requests to `http://localhost:4000/v1` with `model="auto"`. The gateway decides which model receives the request. Clients never need to know about Ollama, Anthropic, or any other backend — changing the model is a gateway config change, not a code change.
+## Requirements
 
-**Routing at the pre-call hook.** LiteLLM's `CustomLogger.async_pre_call_hook` runs before the actual LLM call. This is where the `UnifiedRouter` callback rewrites the `model` field based on language detection. The router inspects the last user message, counts Unicode code points by script family (Hangul, CJK/kana, Latin), and picks a model. The entire detection is a pure Python function — no additional network call, under 1 ms.
+- Docker Desktop or Docker Engine with Compose v2
+- `bash` and `openssl`
+- Internet access for the first image pull
+- Anthropic mode: approximately 5 GB free disk space recommended
+- Fully local mode: approximately 7-10 GB free disk and at least 8 GB of memory available to Docker
 
-**Observability at the gateway, not in the app.** Langfuse traces are created by the gateway callback, not by application code. This means:
-- Every client — Python scripts, curl, LibreChat, LangChain agents — gets traced automatically, with no instrumentation in the application.
-- Failures are traced, not just successes.
-- The routing *decision* is a child span of the LLM generation span, so you can see exactly which language was detected and why a particular model was chosen.
+Local model downloads range from approximately 0.8 GB to 3.4 GB. All menu options can run on CPU; larger models respond more slowly.
 
-**Manual SDK logging, not the built-in callback.** LiteLLM has a `success_callback: [langfuse]` feature that logs every proxy request to Langfuse automatically. We do not use it here. The built-in callback logs management API calls (like `/v2/user/info`) with a placeholder `"default-message-value"` as input, filling Langfuse with noise. Instead, the `UnifiedRouter.async_log_success_event` uses the Langfuse Python SDK directly and filters to `call_type in ("completion", "acompletion")` only.
+Use the memory allocated to Docker, not the laptop's advertised physical memory. On Docker Desktop, check **Settings → Resources → Memory**. This Compose file does not configure GPU passthrough, so recommendations assume CPU inference.
 
----
+## Start the workshop
 
-## Stack components
-
-| Component | Image | Port | Purpose |
-|-----------|-------|------|---------|
-| **Ollama** | `ollama/ollama` | internal | Serves local CPU models via OpenAI-compatible API |
-| **LiteLLM** | `ghcr.io/berriai/litellm:main-stable` | 4000 | Gateway, routing, Langfuse logging |
-| **Langfuse** | `langfuse/langfuse` | 3000 | Trace visualization and analytics |
-| **Postgres** | `postgres:16-alpine` | internal | Langfuse metadata storage |
-
-Langfuse uses only Postgres here — not ClickHouse, Redis, or MinIO. This keeps the stack to four containers and makes it comfortable on a laptop with 8 GB RAM.
-
----
-
-## Prerequisites
-
-- **Docker Desktop** (Mac / Windows) or **Docker Engine + Compose** (Linux)
-- ~3 GB free disk space for images + the default model
-- ~2 GB RAM free while running (4 GB recommended for the 3B model)
-- No GPU required
-
----
-
-## Quick start
-
-### 1. Clone and configure
+Run the interactive setup:
 
 ```bash
-git clone https://github.com/litkhai/lightweight-workshop-llmops-in-a-box.git
-cd lightweight-workshop-llmops-in-a-box
-cp .env.example .env
+./setup.sh
 ```
 
-The default `.env` works out of the box. No edits required for a purely local setup.
+It asks for:
 
-### 2. Start the stack
+1. Workshop user ID, email, and password
+2. ClickHouse Cloud or local ClickHouse
+3. Anthropic API key or, when no key is supplied, Docker memory detection and an explicit choice from the models that fit
+4. Whether to start the stack immediately
+
+The generated `.env` is readable only by its owner and is excluded from Git. Internal PostgreSQL, ClickHouse, Redis, MinIO, JWT, Langfuse, and LiteLLM secrets are generated independently instead of reusing the workshop password.
+
+Pressing Enter through the account prompts uses the workshop defaults: `admin`, `admin@example.com`, and `Clickhouse_4U`. These public defaults are intended only for a laptop workshop environment.
+
+If you chose not to start immediately:
 
 ```bash
-docker compose up -d
+./scripts/start.sh
 ```
 
-Wait about 30–60 seconds for Langfuse to finish its database migration. You can watch progress with:
+The start script launches the selected services, pulls the selected Ollama model when needed, and creates the initial LibreChat administrator. Langfuse initializes the same workshop identity automatically.
+
+When an existing PostgreSQL volume is reused with a regenerated `.env`, the start script updates the persisted local PostgreSQL role to the new generated password without deleting data.
+
+Open (all published ports bind to `127.0.0.1` only):
+
+- LibreChat: [http://localhost:3080](http://localhost:3080)
+- Langfuse: [http://localhost:3000](http://localhost:3000)
+- LiteLLM API: [http://localhost:4000](http://localhost:4000)
+
+Log into LibreChat and Langfuse with the email and password entered during setup.
+
+## Setup choices
+
+### ClickHouse Cloud
+
+Enter the Cloud hostname, database, username, and password. Setup configures Langfuse with:
+
+- HTTPS endpoint on port `8443`
+- Native migration endpoint on port `9440`
+- Migration TLS enabled
+
+Allow connections from the Docker host in the ClickHouse Cloud IP access list. Langfuse v4 requires ClickHouse 25.12 or newer.
+
+### Local ClickHouse
+
+Setup enables the `local-clickhouse` Compose profile and starts `clickhouse/clickhouse-server:25.12`. Data is persisted in a Docker volume. The HTTP and native ports bind only to `127.0.0.1`.
+
+### Anthropic Sonnet
+
+When an Anthropic key is supplied, LiteLLM routes `auto` to `anthropic/claude-sonnet-4-5`. Ollama is not started.
+
+### Local model selection
+
+Without an Anthropic key, setup enables the `local-model` profile, detects the memory available to Docker, and asks the participant to choose from the models that fit. Each option includes its download size. The filter is more conservative when ClickHouse runs locally because ClickHouse and the model share Docker memory. Setup never selects a model automatically.
+
+| Model | Download | Best fit |
+| --- | ---: | --- |
+| `gemma3:1b` | 0.8 GB | Very constrained laptops |
+| `qwen3:1.7b` | 1.4 GB | Lightweight balanced default |
+| `llama3.2:3b` | 2.0 GB | English instructions, summarization, and rewriting |
+| `phi4-mini` | 2.5 GB | Reasoning and precise instruction adherence |
+| `qwen3.5:4b` | 3.4 GB | Highest general quality offered by setup |
+
+Qwen3 and Qwen3.5 enable reasoning by default in Ollama. The gateway sets `reasoning_effort: none` for every local deployment so short workshop requests return a visible answer promptly instead of spending their output budget on hidden reasoning. Participants can still study reasoning behavior later by changing the LiteLLM model configuration.
+
+The workshop uses the following conservative availability thresholds. These are selection guardrails for the complete stack, not the model vendors' minimum requirements.
+
+| Model | ClickHouse Cloud | Local ClickHouse |
+| --- | ---: | ---: |
+| `gemma3:1b` | 4 GB | 4 GB |
+| `qwen3:1.7b` | 7 GB | 7 GB |
+| `llama3.2:3b` | 9 GB | 13 GB |
+| `phi4-mini` | 12 GB | 20 GB |
+| `qwen3.5:4b` | 16 GB | 24 GB |
+
+If two or more models are available, the default menu choice is `qwen3:1.7b`; the participant still makes the final selection.
+
+## Test the gateway directly
+
+Get the generated key from `.env`, then call the OpenAI-compatible endpoint:
 
 ```bash
-docker compose logs -f langfuse
-# ready when you see: "✓ Ready on http://0.0.0.0:3000"
-```
+set -a
+source .env
+set +a
 
-### 3. Pull the model
-
-```bash
-./scripts/pull-model.sh
-# pulls qwen2.5:1.5b (~1 GB) into the Ollama container
-```
-
-This only needs to run once. The model is stored in a Docker volume and persists across restarts.
-
-### 4. Send your first request
-
-```python
-from openai import OpenAI
-
-client = OpenAI(
-    base_url="http://localhost:4000/v1",
-    api_key="sk-workshop-key",
-)
-
-response = client.chat.completions.create(
-    model="auto",
-    messages=[{"role": "user", "content": "Explain what a LLM gateway does in two sentences."}],
-)
-print(response.choices[0].message.content)
-```
-
-Or with curl:
-
-```bash
 curl http://localhost:4000/v1/chat/completions \
-  -H "Authorization: Bearer sk-workshop-key" \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model": "auto", "messages": [{"role": "user", "content": "What is LLMOps?"}]}'
+  -d '{"model":"auto","messages":[{"role":"user","content":"Explain an LLM gateway in two sentences."}]}'
 ```
 
-### 5. Open Langfuse
+Open Langfuse after the response and inspect the generated observation.
 
-Go to [http://localhost:3000](http://localhost:3000) and log in with:
+For a successful local request, verify all three outcomes:
 
-- Email: `workshop@example.com`
-- Password: `workshop123`
-
-Navigate to **Tracing**. The request you just sent should appear with:
-- The full prompt and completion
-- Latency and token counts
-- A `routing` child span showing which script was detected and which model was chosen
-
----
-
-## Language routing in action
-
-The gateway routes requests based on the dominant Unicode script of the last user message. Try sending messages in different languages and observe the `routed` field in the Langfuse trace:
-
-```python
-messages = [
-    "Explain ClickHouse in one sentence.",           # Latin → local (Ollama)
-    "ClickHouse를 한 문장으로 설명해줘.",              # Hangul → local (no API key)
-    "用一句话解释一下 ClickHouse。",                   # CJK → local (Ollama)
-]
-
-for msg in messages:
-    response = client.chat.completions.create(
-        model="auto",
-        messages=[{"role": "user", "content": msg}],
-    )
-    print(f"[{msg[:30]}...] → {response.choices[0].message.content[:80]}")
-```
-
-In Langfuse, each trace will have a `routing` span. Open one and look at the span's `input` and `output` fields — you will see `detected_script` and `routed` logged there.
-
-### Enabling cloud routing (optional)
-
-If you add an Anthropic API key, Korean (Hangul-heavy) messages will be routed to `claude-sonnet` instead of the local model. This lets you compare quality and latency side by side in the same Langfuse project.
-
-Add to your `.env`:
-
-```
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-Then restart LiteLLM:
-
-```bash
-docker compose restart litellm
-```
-
-Now re-run the Korean message and check the trace — `routed` should show `claude-sonnet`, and `actual` should confirm which model answered.
-
----
+1. The API returns HTTP `200` with a non-empty assistant message.
+2. LiteLLM logs a successful `POST /v1/chat/completions` request.
+3. Langfuse shows a new `GENERATION` observation with source `otel`.
 
 ## Changing the local model
 
-The default is `qwen2.5:1.5b`. To use a different model:
+The setup script is the preferred way to select a model. To change it manually without replacing other settings:
 
 ```bash
-# Pull an alternative
-./scripts/pull-model.sh qwen2.5:3b
+# Stop active requests, then edit OLLAMA_MODEL in .env.
+./scripts/pull-model.sh llama3.2:3b
 
-# Update the model name in config
-# Edit config/litellm_config.yaml:
-#   model: ollama/qwen2.5:1.5b  →  model: ollama/qwen2.5:3b
-
-# Restart LiteLLM to pick up the change
-docker compose restart litellm
+# Recreate LiteLLM so its model deployment reads the new value.
+docker compose up -d --force-recreate litellm
 ```
 
-Suggested models by use case:
+`OLLAMA_MODEL` contains the Ollama tag without a provider prefix. Compose supplies the `ollama/` prefix to LiteLLM automatically.
 
-| Model | Size | Notes |
-|-------|------|-------|
-| `qwen2.5:0.5b` | ~400 MB | Fastest; basic quality; good for slow machines |
-| `qwen2.5:1.5b` | ~1 GB | **Default** — good balance |
-| `qwen2.5:3b` | ~2 GB | Better reasoning; needs ≥8 GB RAM |
-| `phi4-mini` | ~2.5 GB | Strong instruction-following |
-| `gemma2:2b` | ~1.6 GB | Good multilingual quality |
+## Troubleshooting
 
----
+### Setup reports that `.env` already exists
 
-## Project structure
+Setup never overwrites credentials. Stop the stack, move `.env` to a backup location, and run `./setup.sh` again. Moving `.env` does not delete Docker volumes.
 
-```
-.
-├── docker-compose.yml          # All four services
-├── .env.example                # Environment variable template
-├── config/
-│   ├── litellm_config.yaml     # Model list, routing config, gateway settings
-│   └── callbacks.py            # UnifiedRouter: language routing + Langfuse logging
-└── scripts/
-    └── pull-model.sh           # Pull model into Ollama container
-```
+### A local response is slow
 
-### `config/callbacks.py`
+CPU inference can be slow on the first request while Ollama loads the model. Check the active model with `docker compose exec ollama ollama ps`. If memory pressure persists, rerun setup and choose a smaller model.
 
-This is the heart of the workshop. The `LanguageRouter` class extends `litellm.CustomLogger` and provides three hooks:
+### A model returns an empty answer
 
-- **`async_pre_call_hook`** — runs before the LLM call. Detects the dominant script, rewrites `data["model"]`, sets Langfuse metadata, and creates a `routing` span.
-- **`async_log_success_event`** — runs after a successful LLM call. Logs the trace and generation span to Langfuse via the SDK. Skips non-completion call types to avoid noise.
-- **`async_post_call_failure_hook`** — runs after a failed call. Logs an error trace to Langfuse.
+Confirm that both local deployments in `config/litellm_config.yaml` retain `reasoning_effort: none`. This is required for predictable short responses from thinking-capable Qwen models. Then recreate LiteLLM.
 
-### `config/litellm_config.yaml`
+### ClickHouse Cloud does not connect
 
-Defines the model list, timeout settings, and callback registration. Key points:
-- `success_callback: []` — built-in Langfuse callback is intentionally disabled (see "Manual SDK logging" above).
-- `callbacks: [callbacks.language_router]` — registers our custom callback.
-- `fallbacks` — if `local` (Ollama) is unavailable and `ANTHROPIC_API_KEY` is set, requests fall back to `claude-sonnet`.
+Confirm that the Cloud service allows the Docker host's public IP and that outbound ports `8443` and `9440` are available. Inspect migrations with `docker compose logs langfuse-web langfuse-worker`.
 
----
-
-## Stopping and resetting
+### A service does not become healthy
 
 ```bash
-# Stop all containers (data is preserved in volumes)
+docker compose ps
+docker compose logs --tail=200 <service-name>
+```
+
+The most useful service names are `litellm`, `librechat`, `langfuse-web`, `langfuse-worker`, `postgres`, `redis`, `minio`, `clickhouse`, `mongodb`, and `ollama`.
+
+## Operations
+
+```bash
+# Status
+docker compose ps
+
+# Follow logs
+docker compose logs -f librechat litellm langfuse-web langfuse-worker
+
+# Stop while preserving data
 docker compose down
 
-# Stop and delete all data (volumes included)
+# Start again
+./scripts/start.sh
+
+# Delete all workshop data (irreversible)
 docker compose down -v
 ```
 
----
+To choose different setup options, stop the stack, move the existing `.env` somewhere safe, and run `./setup.sh` again. Existing Docker volumes are not automatically migrated between different ClickHouse configurations.
 
-## Relationship to the full stack
+## Validation status
 
-This repository is intentionally minimal. The [full llmops-in-a-box stack](https://github.com/litkhai/llmops-in-a-box) adds:
+See the detailed [Docker Validation Report](workshop/docker-validation.md) for the reproducible test procedure, observed evidence, corrected issues, and delivery sign-off checklist.
 
-- AWS infrastructure (Terraform, EC2, Route 53)
-- Langfuse backed by ClickHouse for high-volume trace analytics
-- MinIO for image storage
-- LibreChat as a full chat UI
-- Image generation via Cloudflare Workers AI (FLUX.1-schnell)
-- MCP tool integration (mcp-clickhouse for ClickHouse Cloud)
-- RunPod Serverless for GPU-backed model serving (Phase 4)
-- A multi-phase `stack.yaml` build system
+This revision was validated against the following paths:
 
-If you want to go beyond the workshop, the full stack documentation is at [llmops-in-a-box docs](https://github.com/litkhai/llmops-in-a-box/tree/main/docs).
+- Memory-based availability filtering and explicit selection across all five local models
+- Local and Cloud ClickHouse profile selection
+- Anthropic mode excluding Ollama
+- Local model mode including Ollama
+- Compose configuration rendering for all four ClickHouse/model deployment combinations
+- Live requests through `auto` for both Anthropic Sonnet and a selected Ollama model
+- Langfuse v4 ingestion of `sonnet/response` and `local/response` `GENERATION` observations
+- LibreChat and Langfuse workshop account initialization
+- End-to-end execution of all four combinations: ClickHouse Cloud or local ClickHouse, each paired with Anthropic or a local model
+
+## Repository layout
+
+```text
+.
+├── setup.sh                       # Interactive configuration
+├── docker-compose.yml             # Complete workshop stack
+├── .env.example                   # Local-only field reference; setup generates real secrets
+├── workshop/                      # English learner modules, instructor notes, assets, SQL
+│   ├── README.md                  # Dedicated workshop landing page
+│   ├── 00-setup.md ... 09-wrap-up.md
+│   ├── instructor-guide.md
+│   ├── assets/                    # Dataset and paste-ready evaluators
+│   └── sql/                       # Langfuse v4 ClickHouse analytics
+├── config/
+│   ├── callbacks.py               # Selects Sonnet or the local model for `auto`
+│   ├── librechat.yaml             # LibreChat → LiteLLM connection
+│   └── litellm_config.yaml        # Models, gateway, Langfuse OTEL callback
+└── scripts/
+    ├── start.sh                   # Start, pull model, initialize LibreChat user
+    └── pull-model.sh              # Manually pull an Ollama model
+```
+
+## Langfuse v4 notes
+
+This stack follows the Langfuse v4 self-hosted architecture. PostgreSQL stores application metadata; ClickHouse stores observations and scores; Redis handles queues and caching; MinIO stores incoming events and media; and separate web and worker containers run the application. PostgreSQL always stays local as required by this workshop.

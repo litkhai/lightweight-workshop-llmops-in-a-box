@@ -1,0 +1,19 @@
+version: 1.3.13
+cache: true
+
+interface:
+  endpointsMenu: false
+  modelSelect: true
+
+endpoints:
+  custom:
+    - name: LiteLLM
+      apiKey: "${LITELLM_MASTER_KEY}"
+      baseURL: http://litellm:4000/v1
+      models:
+        default: [auto]
+        fetch: false
+      titleConvo: true
+      titleModel: auto
+      summarize: false
+      modelDisplayLabel: Workshop Model
