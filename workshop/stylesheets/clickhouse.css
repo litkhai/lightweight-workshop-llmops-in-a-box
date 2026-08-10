@@ -189,6 +189,10 @@ pre {
   border-left: 0.16rem solid var(--ch-yellow);
 }
 
+.md-sidebar--secondary {
+  display: none;
+}
+
 .md-search__form {
   border: 1px solid rgba(255, 204, 1, 0.28);
   border-radius: 0.35rem;
