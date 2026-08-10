@@ -41,7 +41,6 @@ theme:
     - navigation.footer
     - navigation.expand
     - navigation.indexes
-    - navigation.path
     - navigation.sections
     - navigation.tabs
     - navigation.tabs.sticky
@@ -95,7 +94,7 @@ markdown_extensions:
       custom_checkbox: true
 
 extra_css:
-  - stylesheets/clickhouse.css
+  - stylesheets/clickhouse-v2.css
 
 extra:
   social:

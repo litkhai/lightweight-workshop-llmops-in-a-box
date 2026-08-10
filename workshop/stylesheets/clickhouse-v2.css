@@ -189,10 +189,6 @@ pre {
   border-left: 0.16rem solid var(--ch-yellow);
 }
 
-.md-sidebar--secondary {
-  display: none;
-}
-
 .md-search__form {
   border: 1px solid rgba(255, 204, 1, 0.28);
   border-radius: 0.35rem;
@@ -277,10 +273,10 @@ pre {
 .ch-hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(13rem, 0.55fr);
-  gap: clamp(1.5rem, 3.5vw, 3rem);
+  grid-template-columns: minmax(0, 1fr) clamp(9rem, 18vw, 13rem);
+  gap: clamp(1.5rem, 3vw, 2.5rem);
   align-items: stretch;
-  padding: clamp(1.6rem, 3.5vw, 2.75rem);
+  padding: clamp(1.5rem, 3vw, 2.4rem);
   margin: 0 0 2rem;
   overflow: hidden;
   color: #fff;
@@ -299,6 +295,7 @@ pre {
 .ch-hero__copy {
   position: relative;
   z-index: 1;
+  min-width: 0;
 }
 
 .ch-hero__eyebrow {
@@ -310,13 +307,16 @@ pre {
 }
 
 .ch-hero h1 {
-  max-width: 16ch;
+  max-width: 18ch;
   margin: 0;
   color: #fff;
-  font-size: clamp(2rem, 4vw, 3.35rem);
+  overflow-wrap: normal;
+  font-size: clamp(2rem, 3.2vw, 3.15rem);
   font-weight: 850;
   line-height: 0.98;
   letter-spacing: -0.06em;
+  text-wrap: balance;
+  word-break: normal;
 }
 
 .ch-hero__lead {
@@ -402,7 +402,7 @@ pre {
 .ch-hero__visual {
   display: flex;
   flex-direction: column;
-  min-height: 12.5rem;
+  min-height: 11rem;
   padding: 1rem;
   background: #0e0e0e;
   border: 1px solid #353535;
@@ -466,11 +466,21 @@ pre {
 
 @media screen and (max-width: 76.2344em) {
   .ch-hero {
+    grid-template-columns: minmax(0, 1fr) 9rem;
+  }
+
+  .ch-hero__visual {
+    min-height: 9rem;
+  }
+}
+
+@media screen and (max-width: 59.9844em) {
+  .ch-hero {
     grid-template-columns: 1fr;
   }
 
   .ch-hero__visual {
-    min-height: 10rem;
+    display: none;
   }
 }
 
@@ -504,7 +514,4 @@ pre {
     width: 100%;
   }
 
-  .ch-hero__visual {
-    display: none;
-  }
 }

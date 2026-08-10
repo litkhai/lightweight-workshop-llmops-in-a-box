@@ -11,6 +11,21 @@
   1 evidence-driven quality loop
 {% endblock %}
 
+{% block site_nav %}
+  {% if nav and not (page and page.is_homepage) %}
+    {% if page.meta and page.meta.hide %}
+      {% set hidden = "hidden" if "navigation" in page.meta.hide %}
+    {% endif %}
+    <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" {{ hidden }}>
+      <div class="md-sidebar__scrollwrap">
+        <div class="md-sidebar__inner">
+          {% include "partials/nav.html" %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
   {% if page and page.is_homepage %}
     <section class="ch-hero" aria-labelledby="ch-hero-title">
