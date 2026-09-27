@@ -88,6 +88,6 @@ Keep a simple evidence log as you work. At the end you should have:
 
 ## Source material
 
-This course adapts the structure of the [official Langfuse workshop](https://langfuse.com/workshop) and the repository-local `clickhouse-hols/usecase/langfuse-eval` quality-loop lab. The implementation is tailored to this stack: LibreChat produces traffic, LiteLLM provides one OpenAI-compatible `auto` route, Langfuse is OSS/self-hosted, and ClickHouse can be local or Cloud.
+This course adapts the structure of the [official Langfuse workshop](https://langfuse.com/workshop) and the [`langfuse-eval` quality-loop lab](https://github.com/litkhai/langfuse-hols/tree/main/labs/langfuse-eval) (formerly `clickhouse-hols/usecase/langfuse-eval`). The implementation is tailored to this stack: LibreChat produces traffic, LiteLLM provides one OpenAI-compatible `auto` route, Langfuse is OSS/self-hosted, and ClickHouse can be local or Cloud.
 
 Continue to [00 — Setup](00-setup.md).
