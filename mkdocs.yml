@@ -2,9 +2,9 @@
 
 site_name: LLMOps in a Box
 site_description: A self-service workshop for observability, evaluation, and ClickHouse analytics on open-source Langfuse.
-site_url: https://litkhai.github.io/lightweight-workshop-llmops-in-a-box/
-repo_url: https://github.com/litkhai/lightweight-workshop-llmops-in-a-box
-repo_name: litkhai/lightweight-workshop-llmops-in-a-box
+site_url: https://litkhai.github.io/llmops-workshop/
+repo_url: https://github.com/litkhai/llmops-workshop
+repo_name: litkhai/llmops-workshop
 edit_uri: edit/main/workshop/
 
 docs_dir: workshop
@@ -99,7 +99,7 @@ extra_css:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/litkhai/lightweight-workshop-llmops-in-a-box
+      link: https://github.com/litkhai/llmops-workshop
       name: Workshop repository on GitHub
 
 copyright: >-
