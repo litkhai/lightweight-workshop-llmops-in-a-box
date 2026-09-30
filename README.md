@@ -52,7 +52,13 @@ Use the memory allocated to Docker, not the laptop's advertised physical memory.
 
 ## Start the workshop
 
-Run the interactive setup:
+Check the machine first — Docker, memory, disk and free ports; it changes nothing:
+
+```bash
+scripts/preflight.sh
+```
+
+Then run the interactive setup:
 
 ```bash
 ./setup.sh
@@ -218,7 +224,7 @@ docker compose down -v
 
 To choose different setup options, stop the stack, move the existing `.env` somewhere safe, and run `./setup.sh` again. Existing Docker volumes are not automatically migrated between different ClickHouse configurations.
 
-## Validation status
+## Verification status
 
 See the detailed [Docker Validation Report](workshop/docker-validation.md) for the reproducible test procedure, observed evidence, corrected issues, and delivery sign-off checklist.
 
@@ -252,6 +258,7 @@ This revision was validated against the following paths:
 │   ├── librechat.yaml             # LibreChat → LiteLLM connection
 │   └── litellm_config.yaml        # Models, gateway, Langfuse OTEL callback
 └── scripts/
+    ├── preflight.sh               # Check Docker, memory, disk and ports before setup
     ├── start.sh                   # Start, pull model, initialize LibreChat user
     └── pull-model.sh              # Manually pull an Ollama model
 ```
